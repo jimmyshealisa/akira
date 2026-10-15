@@ -295,7 +295,7 @@ HttpResponse httpPerform(const HttpRequest& request)
 {
     HttpResponse response;
 
-    if (httpSonyBlocked() && isSonyHost(request.url))
+    if (!request.bypassSonyGate && httpSonyBlocked() && isSonyHost(request.url))
     {
         response.error = "blocked: legacy profile makes no PSN requests";
         return response;

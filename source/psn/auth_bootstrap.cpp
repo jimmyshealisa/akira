@@ -1,6 +1,7 @@
 #include "psn/auth_bootstrap.hpp"
 
 #include <array>
+#include <charconv>
 #include <sstream>
 
 namespace psn::bootstrap {
@@ -33,6 +34,73 @@ void appendParam(std::ostringstream& out, bool& first, std::string_view key, std
 {
     out << (first ? '?' : '&') << key << '=' << urlEncode(value);
     first = false;
+}
+
+std::string buildRemotePlayAuthorizeUrl(std::string_view duid, std::string_view cid, bool noCaptcha)
+{
+    std::ostringstream out;
+    out << AUTHORIZE_URL;
+
+    bool first = true;
+    appendParam(out, first, "client_id", REMOTE_CLIENT_ID);
+    appendParam(out, first, "redirect_uri", REMOTE_REDIRECT_URI);
+    appendParam(out, first, "scope", REMOTE_SCOPES);
+    appendParam(out, first, "response_type", "code");
+    appendParam(out, first, "service_entity", "urn:service-entity:psn");
+    appendParam(out, first, "access_type", "offline");
+    appendParam(out, first, "duid", duid);
+    appendParam(out, first, "smcid", "remoteplay");
+    appendParam(out, first, "layout_type", "popup");
+    appendParam(out, first, "PlatformPrivacyWs1", "minimal");
+    if (noCaptcha)
+        appendParam(out, first, "no_captcha", "true");
+    appendParam(out, first, "cid", cid);
+    return out.str();
+}
+
+std::string_view trimView(std::string_view value)
+{
+    constexpr std::string_view WHITESPACE = " \t\r\n";
+    size_t begin = value.find_first_not_of(WHITESPACE);
+    if (begin == std::string_view::npos)
+        return {};
+    size_t end = value.find_last_not_of(WHITESPACE);
+    return value.substr(begin, end - begin + 1);
+}
+
+bool isHex(unsigned char ch)
+{
+    return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+}
+
+constexpr std::array<char, 16> HEX_LOWER = {
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+};
+
+constexpr const char* DUID_PREFIX = "0000000700410080";
+
+std::string base64Encode(const uint8_t* data, size_t size)
+{
+    static constexpr char TABLE[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    std::string out;
+    out.reserve(((size + 2) / 3) * 4);
+    for (size_t i = 0; i < size; i += 3)
+    {
+        uint32_t chunk = static_cast<uint32_t>(data[i]) << 16;
+        if (i + 1 < size)
+            chunk |= static_cast<uint32_t>(data[i + 1]) << 8;
+        if (i + 2 < size)
+            chunk |= static_cast<uint32_t>(data[i + 2]);
+
+        out.push_back(TABLE[(chunk >> 18) & 0x3F]);
+        out.push_back(TABLE[(chunk >> 12) & 0x3F]);
+        out.push_back(i + 1 < size ? TABLE[(chunk >> 6) & 0x3F] : '=');
+        out.push_back(i + 2 < size ? TABLE[chunk & 0x3F] : '=');
+    }
+    return out;
 }
 
 } // namespace
@@ -79,19 +147,12 @@ std::string buildAuthorizeUrl(Credential credential, std::string_view duid, std:
         return out.str();
     }
 
-    appendParam(out, first, "client_id", REMOTE_CLIENT_ID);
-    appendParam(out, first, "redirect_uri", REMOTE_REDIRECT_URI);
-    appendParam(out, first, "scope", REMOTE_SCOPES);
-    appendParam(out, first, "response_type", "code");
-    appendParam(out, first, "service_entity", "urn:service-entity:psn");
-    appendParam(out, first, "access_type", "offline");
-    appendParam(out, first, "duid", duid);
-    appendParam(out, first, "smcid", "remoteplay");
-    appendParam(out, first, "layout_type", "popup");
-    appendParam(out, first, "PlatformPrivacyWs1", "minimal");
-    appendParam(out, first, "no_captcha", "true");
-    appendParam(out, first, "cid", cid);
-    return out.str();
+    return buildRemotePlayAuthorizeUrl(duid, cid, true);
+}
+
+std::string buildBrowserAuthorizeUrl(std::string_view duid, std::string_view cid)
+{
+    return buildRemotePlayAuthorizeUrl(duid, cid, false);
 }
 
 std::string buildCodeExchangeBody(Credential credential, std::string_view code)
@@ -152,6 +213,108 @@ bool shouldValidateNpsso(const NpssoState& state, int64_t now, int64_t intervalS
         return true;
 
     return (state.lastCheckedAt + intervalSeconds) <= now;
+}
+
+std::string extractAuthCodeFromInput(std::string_view input)
+{
+    input = trimView(input);
+    if (input.empty())
+        return {};
+
+    std::string code;
+    if (input.find('?') != std::string_view::npos)
+    {
+        code = extractAuthCode(input);
+    }
+    else
+    {
+        // "code=xyz", "cid=1&code=xyz" or just "xyz"
+        std::string_view rest = input;
+        size_t at = std::string_view::npos;
+        if (rest.starts_with("code="))
+            at = 0;
+        else if (size_t amp = rest.find("&code="); amp != std::string_view::npos)
+            at = amp + 1;
+
+        if (at != std::string_view::npos)
+        {
+            rest = rest.substr(at + 5);
+            rest = rest.substr(0, rest.find('&'));
+        }
+        else if (rest.find('=') != std::string_view::npos || rest.find('&') != std::string_view::npos)
+        {
+            return {};
+        }
+        code = std::string(rest);
+    }
+
+    if (code.empty())
+        return {};
+    for (unsigned char ch : code)
+    {
+        if (!isUnreserved(ch))
+            return {};
+    }
+    return code;
+}
+
+std::string accountIdFromUserId(std::string_view userId)
+{
+    userId = trimView(userId);
+    if (userId.empty())
+        return {};
+
+    uint64_t value = 0;
+    auto [ptr, ec] = std::from_chars(userId.data(), userId.data() + userId.size(), value);
+    if (ec != std::errc() || ptr != userId.data() + userId.size() || value == 0)
+        return {};
+
+    std::array<uint8_t, 8> bytes{};
+    for (size_t i = 0; i < bytes.size(); i++)
+        bytes[i] = static_cast<uint8_t>((value >> (8 * i)) & 0xFF);
+
+    return base64Encode(bytes.data(), bytes.size());
+}
+
+std::string buildDuid(const std::array<uint8_t, 16>& randomBytes)
+{
+    std::string duid(DUID_PREFIX);
+    duid.reserve(48);
+    for (uint8_t byte : randomBytes)
+    {
+        duid.push_back(HEX_LOWER[byte >> 4]);
+        duid.push_back(HEX_LOWER[byte & 0x0F]);
+    }
+    return duid;
+}
+
+bool isValidDuid(std::string_view duid)
+{
+    if (duid.size() != 48)
+        return false;
+    for (unsigned char ch : duid)
+    {
+        if (!isHex(ch))
+            return false;
+    }
+    return true;
+}
+
+std::string formatCid(std::array<uint8_t, 16> bytes)
+{
+    bytes[6] = static_cast<uint8_t>((bytes[6] & 0x0F) | 0x40);
+    bytes[8] = static_cast<uint8_t>((bytes[8] & 0x3F) | 0x80);
+
+    std::string out;
+    out.reserve(36);
+    for (size_t i = 0; i < bytes.size(); i++)
+    {
+        if (i == 4 || i == 6 || i == 8 || i == 10)
+            out.push_back('-');
+        out.push_back(HEX_LOWER[bytes[i] >> 4]);
+        out.push_back(HEX_LOWER[bytes[i] & 0x0F]);
+    }
+    return out;
 }
 
 } // namespace psn::bootstrap

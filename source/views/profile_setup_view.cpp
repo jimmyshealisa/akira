@@ -4,6 +4,7 @@
 #include "ui/theme.hpp"
 #include "views/legacy_profile_view.hpp"
 #include "views/pair_view.hpp"
+#include "views/psn_browser_login_view.hpp"
 
 using namespace brls::literals;
 
@@ -39,6 +40,16 @@ void ProfileSetupView::buildOptions() {
               [createProfile]() {
                   brls::Application::pushActivity(
                       new brls::Activity(new PairView(createProfile)));
+              });
+
+    addOption("\xEE\xA1\x93",
+              "akira/profile_setup/browser_title"_i18n,
+              "akira/profile_setup/browser_badge"_i18n, palette.success,
+              "akira/profile_setup/browser_body"_i18n,
+              "akira/profile_setup/browser_note"_i18n,
+              [createProfile]() {
+                  brls::Application::pushActivity(
+                      new brls::Activity(new PsnBrowserLoginView(createProfile)));
               });
 
     addOption("\xEE\xA0\x8C",

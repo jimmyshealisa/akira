@@ -31,6 +31,11 @@ struct HttpRequest {
     bool certInfo = false;
     bool followLocation = true;
     bool freshConnect = false;
+    /*
+     * Only for the explicit, user-driven PSN browser login that creates a new full
+     * profile: it has to reach Sony even while a legacy profile is still active.
+     */
+    bool bypassSonyGate = false;
 
     void* reuseHandle = nullptr;
 };

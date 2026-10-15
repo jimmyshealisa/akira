@@ -21,6 +21,9 @@ public:
     brls::View* getDefaultFocus() override { return this; }
     static brls::View* create();
 
+    // Shared with PsnBrowserLoginView so both sign-in paths persist credentials identically.
+    static void applyCredentials(const akira::pair::PairedCredentials& creds, bool createProfile);
+
 private:
     brls::Label* codeLabel = nullptr;
     brls::Label* addrIpLabel = nullptr;
@@ -41,7 +44,6 @@ private:
 
     void startListening();
     void onEvent(akira::pair::ListenerEvent event);
-    static void applyCredentials(const akira::pair::PairedCredentials& creds, bool createProfile);
 };
 
 #endif

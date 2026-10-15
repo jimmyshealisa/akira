@@ -53,6 +53,8 @@ include(vendored_libs)
 file(GLOB_RECURSE MAIN_SRC CONFIGURE_DEPENDS source/*.cpp)
 list(APPEND MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/source/stream/nxext_ipc_server.c)
 list(APPEND MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/source/core/pair/microecc/uECC.c)
+# Vendored QR code generator (MIT, nayuki v1.8.0) for the on-device PSN browser login
+list(APPEND MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/library/qrcodegen/qrcodegen.cpp)
 
 # Switch wrapper for libnx initialization
 list(APPEND MAIN_SRC ${BOREALIS_LIBRARY}/lib/platforms/switch/switch_wrapper.c)
@@ -96,6 +98,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${WIREGUARD_DIR}/lwip-relay/include
     # lwIP includes
     ${LWIP_DIR}/src/include
+    # QR code generator
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/qrcodegen
     ${APP_PLATFORM_INCLUDE}
 )
 
