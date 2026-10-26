@@ -841,7 +841,7 @@
   },
   "wg_import": {
     "title": "Import WireGuard config",
-    "instructions": "Open the address below in a browser on your phone or computer, enter this code, and paste the wg-quick config (from EasyTier's WireGuard setup).",
+    "instructions": "Open the address below in a browser on your phone or computer, then paste the wg-quick config (from EasyTier's WireGuard setup) and submit. The code is only needed when posting manually (e.g. curl).",
     "port_fmt": "port {}",
     "timer_fmt": "Code refreshes in {}",
     "status_waiting": "Waiting for the config…",

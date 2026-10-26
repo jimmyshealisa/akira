@@ -192,6 +192,15 @@ void WgImportServer::run(int port, std::string code) {
         std::string headOnly = head.substr(0, headEnd);
         body = head.substr(headEnd + 4);
 
+        std::string method = headOnly.substr(0, headOnly.find(' '));
+
+        /* Browsing to the address just serves the import page (code embedded). */
+        if (method != "POST") {
+            std::string page = importPage(code);
+            sendResponse(clientSock, 200, "OK", page);
+            continue;
+        }
+
         std::string target = requestTarget(headOnly);
         std::string contentLengthStr = headerValue(headOnly, "Content-Length");
         size_t contentLength = 0;

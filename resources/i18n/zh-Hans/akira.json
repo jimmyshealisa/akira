@@ -786,7 +786,7 @@
   },
   "wg_import": {
     "title": "导入 WireGuard 配置",
-    "instructions": "在手机或电脑浏览器中打开下方地址，输入此代码，粘贴从 EasyTier WireGuard 接入生成的 wg-quick 配置并提交。",
+    "instructions": "在手机或电脑浏览器中打开下方地址，粘贴从 EasyTier WireGuard 接入生成的 wg-quick 配置并提交。代码仅用于 curl 等手工提交时校验。",
     "port_fmt": "端口 {}",
     "timer_fmt": "{} 后刷新代码",
     "status_waiting": "等待配置传入…",
