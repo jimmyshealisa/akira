@@ -68,10 +68,11 @@ std::string headerValue(const std::string& head, const std::string& name)
     return {};
 }
 
-void sendResponse(int fd, int status, const char* reason, const std::string& body)
+void sendResponse(int fd, int status, const char* reason, const std::string& body,
+                  const char* contentType = "text/plain; charset=utf-8")
 {
     std::string response = "HTTP/1.1 " + std::to_string(status) + " " + reason +
-        "\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\nContent-Length: " +
+        "\r\nContent-Type: " + contentType + "\r\nConnection: close\r\nContent-Length: " +
         std::to_string(body.size()) + "\r\n\r\n" + body;
     size_t sent = 0;
     while (sent < response.size()) {
@@ -197,7 +198,7 @@ void WgImportServer::run(int port, std::string code) {
         /* Browsing to the address just serves the import page (code embedded). */
         if (method != "POST") {
             std::string page = importPage(code);
-            sendResponse(clientSock, 200, "OK", page);
+            sendResponse(clientSock, 200, "OK", page, "text/html; charset=utf-8");
             continue;
         }
 
