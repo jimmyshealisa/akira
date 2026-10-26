@@ -736,7 +736,8 @@
     "unlikely": "可能不可用",
     "may_fail": "可能失败",
     "wg_no_config": "未找到 WireGuard 配置文件",
-    "wg_config_path": "请将 wg0.conf 放置在 sdmc:/switch/akira/",
+    "wg_config_path": "请将 wg0.conf 放置在 sdmc:/switch/akira/（或在下方导入）",
+    "wg_import": "导入配置",
     "wg_connect": "连接",
     "wg_disconnect": "断开",
     "wg_status": "状态：",
@@ -782,6 +783,17 @@
     "discovery_local": "发现运行中 · 本地网络",
     "discovery_running_for": "发现运行中：",
     "quitting": "正在关闭…"
+  },
+  "wg_import": {
+    "title": "导入 WireGuard 配置",
+    "instructions": "在手机或电脑浏览器中打开下方地址，输入此代码，粘贴从 EasyTier WireGuard 接入生成的 wg-quick 配置并提交。",
+    "port_fmt": "端口 {}",
+    "timer_fmt": "{} 后刷新代码",
+    "status_waiting": "等待配置传入…",
+    "status_connecting": "设备已连接，正在读取…",
+    "status_imported": "配置导入成功，可关闭此界面。",
+    "status_bad_code": "代码错误。尝试次数过多，请重新打开获取新代码。",
+    "status_error": "传输失败，请重试。"
   },
   "pair": {
     "title": "与伴侣应用配对",

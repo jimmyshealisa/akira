@@ -205,6 +205,26 @@ bool WireGuardManager::loadConfig() {
     return true;
 }
 
+bool WireGuardManager::saveConfigText(const std::string& text) {
+    {
+        std::ofstream file(CONFIG_PATH, std::ios::binary | std::ios::trunc);
+        if (!file.is_open()) {
+            lastError = "Cannot write config file";
+            brls::Logger::error("WG: {}", lastError);
+            return false;
+        }
+        file.write(text.data(), static_cast<std::streamsize>(text.size()));
+        if (!file.good()) {
+            lastError = "Failed to write config file";
+            brls::Logger::error("WG: {}", lastError);
+            return false;
+        }
+    }
+
+    brls::Logger::info("WG: imported config ({} bytes), reloading", text.size());
+    return loadConfig();
+}
+
 bool WireGuardManager::connect() {
     brls::Logger::info("WG: connect() entered, acquiring lock");
     std::lock_guard<std::mutex> lock(mutex);

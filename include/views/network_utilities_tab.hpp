@@ -13,6 +13,8 @@ public:
     NetworkUtilitiesTab();
     ~NetworkUtilitiesTab() override;
 
+    void willAppear(bool resetState) override;
+
     static brls::View* create();
 
 private:

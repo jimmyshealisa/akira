@@ -791,7 +791,8 @@
     "unlikely": "Unlikely",
     "may_fail": "May fail",
     "wg_no_config": "No WireGuard config found",
-    "wg_config_path": "Place wg0.conf at sdmc:/switch/akira/",
+    "wg_config_path": "Place wg0.conf at sdmc:/switch/akira/ (or import it below)",
+    "wg_import": "Import config",
     "wg_connect": "Connect",
     "wg_disconnect": "Disconnect",
     "wg_status": "Status: ",
@@ -837,6 +838,17 @@
     "discovery_local": "Discovery running · local network",
     "discovery_running_for": "Discovery running for",
     "quitting": "Closing…"
+  },
+  "wg_import": {
+    "title": "Import WireGuard config",
+    "instructions": "Open the address below in a browser on your phone or computer, enter this code, and paste the wg-quick config (from EasyTier's WireGuard setup).",
+    "port_fmt": "port {}",
+    "timer_fmt": "Code refreshes in {}",
+    "status_waiting": "Waiting for the config…",
+    "status_connecting": "Device connected, reading…",
+    "status_imported": "Config imported. You can close this screen.",
+    "status_bad_code": "Wrong code. Too many attempts — reopen to get a new one.",
+    "status_error": "Transfer failed. Try again."
   },
   "pair": {
     "title": "Pair with Companion",

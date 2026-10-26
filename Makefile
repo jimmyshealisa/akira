@@ -40,6 +40,7 @@ TEST_SRC     := $(wildcard $(CURDIR)/tests/*.cpp) \
                 $(CURDIR)/source/psn/client.cpp \
                 $(CURDIR)/source/psn/log.cpp \
                 $(CURDIR)/source/core/pair_crypto.cpp \
+                $(CURDIR)/source/util/web_form.cpp \
                 $(CURDIR)/source/input/rumble_profile.cpp \
                 $(CURDIR)/source/input/pad_output_state.cpp
 PAIR_UECC_SRC := $(CURDIR)/source/core/pair/microecc/uECC.c

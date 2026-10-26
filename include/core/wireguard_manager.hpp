@@ -21,6 +21,8 @@ public:
 
     bool configExists() const;
     bool loadConfig();
+    // Writes a wg-quick config (from the import server) to CONFIG_PATH and reloads it.
+    bool saveConfigText(const std::string& text);
     bool connect();
     void disconnect();
     bool isConnected() const;

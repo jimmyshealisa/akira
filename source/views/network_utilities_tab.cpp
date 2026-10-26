@@ -1,6 +1,7 @@
 #include "views/network_utilities_tab.hpp"
 #include "ui/theme.hpp"
 #include "core/wireguard_manager.hpp"
+#include "views/wg_import_view.hpp"
 #include <format>
 #include <vector>
 #include <borealis/core/i18n.hpp>
@@ -21,10 +22,31 @@ NetworkUtilitiesTab::~NetworkUtilitiesTab() {
     *alive = false;
 }
 
+void NetworkUtilitiesTab::willAppear(bool resetState) {
+    Box::willAppear(resetState);
+    // Picks up a config imported through WgImportView (or edited on the SD card).
+    initWireGuardUI();
+}
+
 void NetworkUtilitiesTab::initWireGuardUI() {
     auto& wg = WireGuardManager::instance();
 
+    wgStatusContainer->clearViews();
+    wgButtonContainer->clearViews();
+    wgConnectBtn = nullptr;
+    wgDisconnectBtn = nullptr;
+
+    auto* importBtn = new brls::Button();
+    importBtn->setText("akira/network/wg_import"_i18n);
+    importBtn->setStyle(&brls::BUTTONSTYLE_BORDERED);
+    importBtn->registerClickAction([](brls::View*) {
+        brls::Application::pushActivity(new brls::Activity(new WgImportView()));
+        return true;
+    });
+
     if (!wg.configExists()) {
+        wgButtonContainer->addView(importBtn);
+
         auto* noConfigLabel = new brls::Label();
         noConfigLabel->setText("akira/network/wg_no_config"_i18n);
         noConfigLabel->setFontSize(18);
@@ -57,6 +79,8 @@ void NetworkUtilitiesTab::initWireGuardUI() {
         return true;
     });
     wgButtonContainer->addView(wgDisconnectBtn);
+
+    wgButtonContainer->addView(importBtn);
 
     updateWireGuardStatus();
 }
