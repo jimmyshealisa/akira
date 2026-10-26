@@ -41,10 +41,14 @@ TEST_SRC     := $(wildcard $(CURDIR)/tests/*.cpp) \
                 $(CURDIR)/source/psn/log.cpp \
                 $(CURDIR)/source/core/pair_crypto.cpp \
                 $(CURDIR)/source/util/web_form.cpp \
+                $(CURDIR)/source/util/easytier_portal.cpp \
+                $(CURDIR)/source/core/wg_import_pages.cpp \
                 $(CURDIR)/source/input/rumble_profile.cpp \
                 $(CURDIR)/source/input/pad_output_state.cpp
 PAIR_UECC_SRC := $(CURDIR)/source/core/pair/microecc/uECC.c
 PAIR_UECC_OBJ := $(CURDIR)/build/tests/uECC.o
+MONOCYPHER_SRC := $(CURDIR)/library/switch-wireguard/library/crypto/monocypher.c
+MONOCYPHER_OBJ := $(CURDIR)/build/tests/monocypher.o
 JSONC_PREFIX ?= $(shell pkg-config --variable=prefix json-c 2>/dev/null || echo /opt/homebrew)
 
 # Colors
@@ -109,10 +113,11 @@ test:
 	@mkdir -p "$(CURDIR)/build/tests"
 	@printf "$(GREEN)[*]$(NC) Building host tests...\n"
 	@cc -std=c11 -O2 -I"$(CURDIR)/source/core/pair/microecc" -c "$(PAIR_UECC_SRC)" -o "$(PAIR_UECC_OBJ)"
+	@cc -std=c99 -O2 -c "$(MONOCYPHER_SRC)" -o "$(MONOCYPHER_OBJ)"
 	@c++ -std=c++23 -g -O0 -Wall -Wextra -Wno-unused-parameter \
 		-I"$(CURDIR)/include" -I"$(CURDIR)/tests" -I"$(JSONC_PREFIX)/include" \
 		-I"$(CURDIR)/library/tomlplusplus/include" \
-		$(TEST_SRC) "$(PAIR_UECC_OBJ)" -L"$(JSONC_PREFIX)/lib" -ljson-c -o "$(TEST_BIN)"
+		$(TEST_SRC) "$(PAIR_UECC_OBJ)" "$(MONOCYPHER_OBJ)" -L"$(JSONC_PREFIX)/lib" -ljson-c -o "$(TEST_BIN)"
 	@printf "$(GREEN)[*]$(NC) Running host tests...\n"
 	@"$(TEST_BIN)"
 

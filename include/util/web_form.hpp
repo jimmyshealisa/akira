@@ -32,6 +32,24 @@ std::string requestTarget(std::string_view requestHead);
  */
 std::string validateWgConfigText(std::string_view text);
 
+// Drops trailing "# ..." annotations from key = value lines and trims each line.
+std::string stripInlineComments(std::string_view text);
+
+std::string htmlEscape(std::string_view text);
+
+// Individual fields from the structured WireGuard form.
+struct WgFields {
+    std::string privateKey;
+    std::string address;
+    std::string publicKey;
+    std::string endpoint;
+    std::string presharedKey;
+    std::string keepalive;
+    std::string mtu;
+};
+
+std::string buildWgConfigText(const WgFields& fields);
+
 } // namespace akira::web
 
 #endif // AKIRA_WEB_FORM_HPP

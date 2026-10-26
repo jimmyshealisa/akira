@@ -11,6 +11,7 @@
     paddingBottom="30">
 
     <brls:Label
+        id="wgimport/title"
         text="@i18n/akira/wg_import/title"
         fontSize="28"
         textColor="@theme/brls/text"
@@ -18,44 +19,26 @@
         marginBottom="10"/>
 
     <brls:Label
+        id="wgimport/instructions"
         text="@i18n/akira/wg_import/instructions"
         fontSize="18"
         textColor="@theme/akira/text_muted"
         horizontalAlign="center"
         marginBottom="30"
-        width="760"/>
+        width="820"/>
 
-    <brls:Box
-        width="auto"
-        height="auto"
-        axis="row"
-        alignItems="center"
-        justifyContent="center"
-        marginBottom="18">
-
-        <brls:Label
-            id="wgimport/addrIp"
-            text=""
-            fontSize="26"/>
-
-        <brls:Label
-            text="·"
-            fontSize="26"
-            textColor="@theme/akira/surface_line"
-            marginLeft="12"
-            marginRight="12"/>
-
-        <brls:Label
-            id="wgimport/addrPort"
-            text=""
-            fontSize="26"/>
-    </brls:Box>
+    <brls:Label
+        id="wgimport/url"
+        text=""
+        fontSize="34"
+        horizontalAlign="center"
+        marginBottom="18"/>
 
     <brls:Label
         id="wgimport/code"
-        text="0 0 0 0"
-        fontSize="64"
-        textColor="@theme/brls/text"
+        text=""
+        fontSize="18"
+        textColor="@theme/akira/text_muted"
         horizontalAlign="center"/>
 
     <brls:Label
@@ -64,7 +47,7 @@
         fontSize="16"
         textColor="@theme/akira/accent"
         horizontalAlign="center"
-        marginTop="16"/>
+        marginTop="10"/>
 
     <brls:Label
         id="wgimport/status"

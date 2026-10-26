@@ -36,15 +36,25 @@ void NetworkUtilitiesTab::initWireGuardUI() {
     wgConnectBtn = nullptr;
     wgDisconnectBtn = nullptr;
 
+    auto* easytierBtn = new brls::Button();
+    easytierBtn->setText("akira/network/wg_easytier"_i18n);
+    easytierBtn->setStyle(&brls::BUTTONSTYLE_BORDERED);
+    easytierBtn->setMarginRight(15);
+    easytierBtn->registerClickAction([](brls::View*) {
+        brls::Application::pushActivity(new brls::Activity(new WgImportView(akira::wg::ImportPage::EasyTier)));
+        return true;
+    });
+
     auto* importBtn = new brls::Button();
     importBtn->setText("akira/network/wg_import"_i18n);
     importBtn->setStyle(&brls::BUTTONSTYLE_BORDERED);
     importBtn->registerClickAction([](brls::View*) {
-        brls::Application::pushActivity(new brls::Activity(new WgImportView()));
+        brls::Application::pushActivity(new brls::Activity(new WgImportView(akira::wg::ImportPage::WireGuard)));
         return true;
     });
 
     if (!wg.configExists()) {
+        wgButtonContainer->addView(easytierBtn);
         wgButtonContainer->addView(importBtn);
 
         auto* noConfigLabel = new brls::Label();
@@ -78,8 +88,10 @@ void NetworkUtilitiesTab::initWireGuardUI() {
         onWgDisconnectClicked();
         return true;
     });
+    wgDisconnectBtn->setMarginRight(15);
     wgButtonContainer->addView(wgDisconnectBtn);
 
+    wgButtonContainer->addView(easytierBtn);
     wgButtonContainer->addView(importBtn);
 
     updateWireGuardStatus();

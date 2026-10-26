@@ -15,39 +15,31 @@ std::string spaced(const std::string& s) {
     std::string out;
     for (std::size_t i = 0; i < s.size(); i++) {
         if (i > 0)
-            out += "  ";
+            out += " ";
         out += s[i];
     }
     return out;
 }
 
-const char* statusKey(akira::wg::ImportEvent event) {
-    switch (event) {
-        case akira::wg::ImportEvent::Listening:
-            return "akira/wg_import/status_waiting";
-        case akira::wg::ImportEvent::ClientConnected:
-            return "akira/wg_import/status_connecting";
-        case akira::wg::ImportEvent::Imported:
-            return "akira/wg_import/status_imported";
-        case akira::wg::ImportEvent::BadCode:
-            return "akira/wg_import/status_bad_code";
-        case akira::wg::ImportEvent::Error:
-        default:
-            return "akira/wg_import/status_error";
-    }
-}
-
 } // namespace
 
-WgImportView::WgImportView() {
+WgImportView::WgImportView(akira::wg::ImportPage page) : page(page) {
     this->inflateFromXMLRes("xml/views/wg_import.xml");
 
+    titleLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/title"));
+    instructionsLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/instructions"));
+    urlLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/url"));
     codeLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/code"));
-    addrIpLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/addrIp"));
-    addrPortLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/addrPort"));
     timerLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/timer"));
     statusLabel = dynamic_cast<brls::Label*>(this->getView("wgimport/status"));
     closeBtn = dynamic_cast<brls::Button*>(this->getView("wgimport/close"));
+
+    bool easytier = page == akira::wg::ImportPage::EasyTier;
+    if (titleLabel)
+        titleLabel->setText(easytier ? "akira/wg_import/title_easytier"_i18n : "akira/wg_import/title"_i18n);
+    if (instructionsLabel)
+        instructionsLabel->setText(easytier ? "akira/wg_import/instructions_easytier"_i18n
+                                            : "akira/wg_import/instructions"_i18n);
 
     if (closeBtn) {
         closeBtn->registerClickAction([](brls::View*) {
@@ -66,13 +58,15 @@ WgImportView::WgImportView() {
 
     const auto& palette = akira::ui::active();
     std::string ip = akira::pair::PairListener::localIpv4();
-    if (addrIpLabel) {
-        addrIpLabel->setText(ip.empty() ? "-" : ip);
-        addrIpLabel->setTextColor(palette.accent);
-    }
-    if (addrPortLabel) {
-        addrPortLabel->setText(brls::getStr("akira/wg_import/port_fmt", listenPort));
-        addrPortLabel->setTextColor(palette.warning);
+    if (urlLabel) {
+        if (ip.empty()) {
+            urlLabel->setText("akira/wg_import/no_network"_i18n);
+            urlLabel->setTextColor(palette.danger);
+        } else {
+            urlLabel->setText("http://" + ip + ":" + std::to_string(listenPort) +
+                              (easytier ? "/easytier" : "/wireguard"));
+            urlLabel->setTextColor(palette.accent);
+        }
     }
 
     startListening();
@@ -86,14 +80,15 @@ WgImportView::~WgImportView() {
 void WgImportView::startListening() {
     std::string code = akira::pair::PairListener::generateCode();
     if (codeLabel)
-        codeLabel->setText(spaced(code));
+        codeLabel->setText(brls::getStr("akira/wg_import/code_fmt", spaced(code)));
 
     windowStart = std::chrono::steady_clock::now();
     lastShownSecond = -1;
     counting = true;
+    badCodes = 0;
 
     auto guard = alive;
-    server.start(listenPort, code, [this, guard](akira::wg::ImportEvent event) {
+    server.start(listenPort, code, page, [this, guard](akira::wg::ImportEvent event) {
         brls::sync([this, guard, event]() {
             if (!*guard)
                 return;
@@ -118,7 +113,8 @@ void WgImportView::draw(NVGcontext* vg, float x, float y, float width, float hei
             timerLabel->setText(brls::getStr("akira/wg_import/timer_fmt", std::string(buf)));
         }
         if (remaining == 0) {
-            // Rotate the code so a window left open does not stay valid forever.
+            // Nobody opened the page: rotate the code so an idle screen does not
+            // stay valid forever.
             startListening();
             return;
         }
@@ -128,19 +124,42 @@ void WgImportView::draw(NVGcontext* vg, float x, float y, float width, float hei
 }
 
 void WgImportView::onEvent(akira::wg::ImportEvent event) {
-    if (event == akira::wg::ImportEvent::Imported) {
-        counting = false;
-        brls::Application::notify("akira/wg_import/imported"_i18n);
-        brls::Application::popActivity();
-        return;
-    }
+    using akira::wg::ImportEvent;
 
-    if (event == akira::wg::ImportEvent::BadCode) {
-        counting = false;
-        if (timerLabel)
-            timerLabel->setText("");
-    }
+    switch (event) {
+        case ImportEvent::Imported:
+            counting = false;
+            brls::Application::notify("akira/wg_import/imported"_i18n);
+            brls::Application::popActivity();
+            return;
 
-    if (statusLabel)
-        statusLabel->setText(brls::getStr(statusKey(event)));
+        case ImportEvent::ClientConnected:
+            // The browser has the form (with this code); keep the code stable
+            // while the user fills it in, however long that takes.
+            counting = false;
+            if (timerLabel)
+                timerLabel->setText("");
+            if (statusLabel)
+                statusLabel->setText("akira/wg_import/status_connecting"_i18n);
+            return;
+
+        case ImportEvent::BadCode:
+            badCodes++;
+            if (statusLabel)
+                statusLabel->setText(badCodes >= akira::wg::WgImportServer::kMaxTries
+                                         ? "akira/wg_import/status_bad_code"_i18n
+                                         : "akira/wg_import/status_bad_code_retry"_i18n);
+            return;
+
+        case ImportEvent::Listening:
+            if (statusLabel)
+                statusLabel->setText("akira/wg_import/status_waiting"_i18n);
+            return;
+
+        case ImportEvent::Error:
+        default:
+            if (statusLabel)
+                statusLabel->setText("akira/wg_import/status_error"_i18n);
+            return;
+    }
 }

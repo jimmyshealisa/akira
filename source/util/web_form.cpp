@@ -151,8 +151,15 @@ std::string validateWgConfigText(std::string_view text)
         } else if (iequals(section, "Peer")) {
             if (iequals(key, "PublicKey"))
                 hasPublicKey = true;
-            else if (iequals(key, "Endpoint"))
+            else if (iequals(key, "Endpoint")) {
                 hasEndpoint = true;
+                size_t colon = value.rfind(':');
+                if (colon == std::string_view::npos || colon + 1 >= value.size())
+                    return "[Peer] Endpoint needs host:port";
+                std::string_view host = value.substr(0, colon);
+                if (host == "0.0.0.0" || host == "[::]" || host == "::")
+                    return "[Peer] Endpoint is a wildcard address; use the portal node's public IP or domain";
+            }
         }
     }
 
@@ -167,6 +174,67 @@ std::string validateWgConfigText(std::string_view text)
     if (!hasEndpoint)
         return "missing [Peer] Endpoint";
     return {};
+}
+
+std::string stripInlineComments(std::string_view text)
+{
+    std::string out;
+    out.reserve(text.size());
+    size_t pos = 0;
+    while (pos < text.size()) {
+        size_t nl = text.find('\n', pos);
+        std::string_view line = text.substr(pos, nl == std::string_view::npos
+            ? std::string_view::npos
+            : nl - pos);
+        pos = nl == std::string_view::npos ? text.size() : nl + 1;
+
+        std::string_view trimmed = trim(line);
+        if (!trimmed.empty() && trimmed[0] != '#') {
+            // Base64 keys, hosts and numbers never contain '#', so anything after
+            // it is an annotation (easytier-cli prints "Endpoint = ... # replace").
+            size_t hash = trimmed.find('#');
+            if (hash != std::string_view::npos)
+                trimmed = trim(trimmed.substr(0, hash));
+        }
+        out.append(trimmed);
+        out.push_back('\n');
+    }
+    return out;
+}
+
+std::string htmlEscape(std::string_view text)
+{
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+        switch (c) {
+            case '&': out += "&amp;"; break;
+            case '<': out += "&lt;"; break;
+            case '>': out += "&gt;"; break;
+            case '"': out += "&quot;"; break;
+            case '\'': out += "&#39;"; break;
+            default: out.push_back(c);
+        }
+    }
+    return out;
+}
+
+std::string buildWgConfigText(const WgFields& f)
+{
+    std::string conf = "[Interface]\n";
+    conf += "PrivateKey = " + std::string(trim(f.privateKey)) + "\n";
+    conf += "Address = " + std::string(trim(f.address)) + "\n";
+    if (!trim(f.mtu).empty())
+        conf += "MTU = " + std::string(trim(f.mtu)) + "\n";
+    conf += "\n[Peer]\n";
+    conf += "PublicKey = " + std::string(trim(f.publicKey)) + "\n";
+    if (!trim(f.presharedKey).empty())
+        conf += "PresharedKey = " + std::string(trim(f.presharedKey)) + "\n";
+    conf += "AllowedIPs = 0.0.0.0/0\n";
+    conf += "Endpoint = " + std::string(trim(f.endpoint)) + "\n";
+    std::string_view keepalive = trim(f.keepalive);
+    conf += "PersistentKeepalive = " + std::string(keepalive.empty() ? "25" : keepalive) + "\n";
+    return conf;
 }
 
 } // namespace akira::web

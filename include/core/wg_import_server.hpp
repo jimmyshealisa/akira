@@ -8,12 +8,15 @@
 
 /*
  * LAN push of a WireGuard config, companion-app style but over plain HTTP: the
- * Switch shows an address plus a short code, the user opens it in any browser on
- * a phone / PC, pastes the wg-quick config EasyTier generated and submits. The
- * config is validated lightly, written to wg0.conf and reloaded.
+ * Switch shows an address, the user opens it in any browser on a phone / PC and
+ * fills in a form. Two pages:
+ *   /easytier   network name + secret + VPN portal node; keys derived on device
+ *   /wireguard  individual wg-quick fields, or a pasted config
+ * The result is validated, written to wg0.conf and reloaded.
  *
- * The code gates the write because anyone on the LAN could otherwise replace the
- * tunnel config. Bad-code attempts are limited like the companion pairing.
+ * The code (embedded in the served form) gates the write so a random web page
+ * cannot blind-POST a config through the user's browser. Bad-code attempts are
+ * limited like the companion pairing.
  */
 namespace akira::wg {
 
@@ -25,6 +28,11 @@ enum class ImportEvent {
     Error,
 };
 
+enum class ImportPage {
+    EasyTier,
+    WireGuard,
+};
+
 class WgImportServer {
 public:
     using EventCallback = std::function<void(ImportEvent)>;
@@ -32,13 +40,14 @@ public:
     WgImportServer() = default;
     ~WgImportServer();
 
-    void start(int port, const std::string& code, EventCallback onEvent);
+    void start(int port, const std::string& code, ImportPage defaultPage, EventCallback onEvent);
     void stop();
 
     static constexpr int kMaxTries = 3;
+    static constexpr const char* PROFILE_PATH = "sdmc:/switch/akira/easytier.conf";
 
 private:
-    void run(int port, std::string code);
+    void run(int port, std::string code, ImportPage defaultPage);
 
     std::thread thread_;
     std::atomic<bool> running_{false};
